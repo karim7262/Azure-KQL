@@ -1,0 +1,62 @@
+
+AzureDiagnostics
+| where Category == "ApplicationGatewayAccessLog"
+| summarize count() by serverStatus_s
+ 
+Otherwise, for V2 backend health monitoring is available via Metrics only (Unhealthy Host Count). 
+ 
+Backend health and diagnostic logs for Application Gateway
+ 
+CPU utilization has been replaced by Capacity Units. A capacity unit consists of following parameters:
+ 
+ 
+Understanding pricing - Azure Application Gateway | Microsoft Learn
+ 
+So, an alert can be set up for this metric. You can check your maximum capacity unit usage in the last one month and set an alert if it crosses 75% of it. 
+ 
+In terms of autoscaling, you can set minimum and maximum instance count to any value, you will only be billed for the Capacity Units that are actually utilized. When defining minimum instance count, you can check the Compute unit metric, which is a representation of your gateway’s CPU utilization.  Based on your peak usage divided by 10, you can set the minimum number of instances required. When having a value here that is too low, and AppGW experiences higher than normal traffic, each new instance required to process the load will take 6-7 min to be deployed. 
+ 
+Application Gateway high traffic volume support | Microsoft Learn
+ 
+Both Capacity and Compute units can be monitored from the portal Metrics. 
+
+// Failed requests per hour 
+// Count of requests to which Application Gateway responded with an error. 
+
+AzureDiagnostics
+| where ResourceType == "APPLICATIONGATEWAYS" and OperationName == "ApplicationGatewayAccess" and httpStatus_d > 399
+| summarize AggregatedValue = count() by bin(TimeGenerated, 1h), _ResourceId
+| render timechart
+ 
+// Top 10 Client IPs 
+// Count of requests per client IP. 
+
+AzureDiagnostics
+| where ResourceType == "APPLICATIONGATEWAYS" and OperationName == "ApplicationGatewayAccess"
+| summarize AggregatedValue = count() by clientIP_s
+| top 10 by AggregatedValue
+ 
+//ServerResponse
+//Count by HTTP codes returned by the backend to client. 
+ 
+AzureDiagnostics
+| where Category == "ApplicationGatewayAccessLog"
+| summarize count() by serverStatus_s
+ 
+//Identify by host and HTTP status
+//Search for a specific status on given a host.
+ 
+AzureDiagnostics
+| where Category == "ApplicationGatewayAccessLog"
+| where host_s == "your-hostname.com"
+| where httpStatus_d == ""
+| sort by TimeGenerated
+ 
+//WAF logs
+//Identify requests processed by WAF either matched or blocked.
+ 
+AzureDiagnostics
+| where Category == "ApplicationGatewayFirewallLog"
+| sort by TimeGenerated
+ 
+===========================
